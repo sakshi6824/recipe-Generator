@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Book</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .add-recipe {
+            margin-bottom: 40px;
+        }
+
+        .add-recipe input,
+        .add-recipe textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .add-recipe button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .recipe-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .recipe-card {
+            background-color: #f9f9f9;
+            padding: 20px;
+            width: 30%;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .recipe-card h3 {
+            margin-top: 0;
+        }
+
+        .recipe-card button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .recipe-card button:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Recipe Book</h1>
+        </header>
+
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search for recipes..." oninput="searchRecipe()">
+        </div>
+
+        <div class="add-recipe">
+            <h2>Add Recipe</h2>
+            <form id="recipeForm">
+                <input type="text" id="recipeName" placeholder="Recipe Name" required>
+                <textarea id="recipeIngredients" placeholder="Ingredients" required></textarea>
+                <textarea id="recipeInstructions" placeholder="Instructions" required></textarea>
+                <label for="recipeRating">Rating (1-5):</label>
+                <input type="number" id="recipeRating" min="1" max="5" required>
+                <button type="submit">Add Recipe</button>
+            </form>
+        </div>
+
+        <div class="recipe-list" id="recipeList">
+            <!-- Recipes will be displayed here -->
+        </div>
+    </div>
+
+    <script>
+        const recipeList = document.getElementById('recipeList');
+        const recipeForm = document.getElementById('recipeForm');
+        const searchInput = document.getElementById('searchInput');
+
+        // Store recipes in local storage (to persist data across sessions)
+        let recipes = JSON.parse(localStorage.getItem('recipes')) || [];
+
+        // Function to display all recipes
+        function displayRecipes(recipesToDisplay) {
+            recipeList.innerHTML = '';
+            recipesToDisplay.forEach((recipe, index) => {
+                const recipeCard = document.createElement('div');
+                recipeCard.classList.add('recipe-card');
+                recipeCard.innerHTML = `
+                    <h3>${recipe.name}</h3>
+                    <p><strong>Ingredients:</strong> ${recipe.ingredients}</p>
+                    <p><strong>Instructions:</strong> ${recipe.instructions}</p>
+                    <p><strong>Rating:</strong> ${'★'.repeat(recipe.rating)}</p>
+                    <button onclick="deleteRecipe(${index})">Delete</button>
+                    <button onclick="editRecipe(${index})">Edit</button>
+                `;
+                recipeList.appendChild(recipeCard);
+            });
+        }
+
+        // Function to add a new recipe
+        function addRecipe(event) {
+            event.preventDefault();
+            const recipeName = document.getElementById('recipeName').value;
+            const recipeIngredients = document.getElementById('recipeIngredients').value;
+            const recipeInstructions = document.getElementById('recipeInstructions').value;
+            const recipeRating = parseInt(document.getElementById('recipeRating').value);
+
+            const newRecipe = {
+                name: recipeName,
+                ingredients: recipeIngredients,
+                instructions: recipeInstructions,
+                rating: recipeRating
+            };
+
+            recipes.push(newRecipe);
+            localStorage.setItem('recipes', JSON.stringify(recipes));
+            displayRecipes(recipes);
+            recipeForm.reset();
+        }
+
+        // Function to delete a recipe
+        function deleteRecipe(index) {
+            recipes.splice(index, 1);
+            localStorage.setItem('recipes', JSON.stringify(recipes));
+            displayRecipes(recipes);
+        }
+
+        // Function to edit a recipe
+        function editRecipe(index) {
+            const recipe = recipes[index];
+            document.getElementById('recipeName').value = recipe.name;
+            document.getElementById('recipeIngredients').value = recipe.ingredients;
+            document.getElementById('recipeInstructions').value = recipe.instructions;
+            document.getElementById('recipeRating').value = recipe.rating;
+
+            // Change the add button to "Update Recipe"
+            const submitButton = document.querySelector('.add-recipe button');
+            submitButton.textContent = 'Update Recipe';
+            submitButton.removeEventListener('click', addRecipe);
+            submitButton.addEventListener('click', function updateRecipe(event) {
+                event.preventDefault();
+                recipe.name = document.getElementById('recipeName').value;
+                recipe.ingredients = document.getElementById('recipeIngredients').value;
+                recipe.instructions = document.getElementById('recipeInstructions').value;
+                recipe.rating = parseInt(document.getElementById('recipeRating').value);
+
+                localStorage.setItem('recipes', JSON.stringify(recipes));
+                displayRecipes(recipes);
+                recipeForm.reset();
+                submitButton.textContent = 'Add Recipe';
+                submitButton.removeEventListener('click', updateRecipe);
+                submitButton.addEventListener('click', addRecipe);
+            });
+        }
+
+        // Function to search recipes by name or ingredients
+        function searchRecipe() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const filteredRecipes = recipes.filter(recipe => 
+                recipe.name.toLowerCase().includes(searchTerm) ||
+                recipe.ingredients.toLowerCase().includes(searchTerm)
+            );
+            displayRecipes(filteredRecipes);
+        }
+
+        // Event listener to handle form submission
+        recipeForm.addEventListener('submit', addRecipe);
+
+        // Initial call to display recipes when the page loads
+        displayRecipes(recipes);
+    </script>
+</body>
+</html>
